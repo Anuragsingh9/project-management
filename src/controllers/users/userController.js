@@ -30,7 +30,7 @@ async function login(req, res) {
         const user = await collection.findOne({ email });
         const isPasswordMatching = await bcrypt.compare(password, user.password);
         if (isPasswordMatching) {
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '8h' });
             res.status(200).json({ status: 'ok', token: token, message: 'Login successfull' });
         }
     } catch (error) {
