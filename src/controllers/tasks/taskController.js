@@ -52,8 +52,6 @@ async function getUserTaskById(req, res) {
             matchCondition["user_task_details.project_id"] = new ObjectId(project_id);
         }
 
-        console.log(userIdQuery);
-        // Fetch tasks based on user ID
         const tasks = await req.db.collection('tasks')
             .aggregate([
                 {
@@ -151,13 +149,13 @@ async function getUserTaskById(req, res) {
 async function getProjectTasks(req, res) {
 
     try {
-        const { projectId } = req.params; 
-        const { user_id } = req.query;   
+        const { projectId } = req.params;
+        const { user_id } = req.query;
 
         if (!projectId) {
             return res.status(400).json({ status: 'error', message: 'Project ID is required' });
         }
-        
+
         const projectIdQuery = ObjectId.isValid(projectId) ? new ObjectId(projectId) : projectId;
 
         const matchCondition = {
@@ -165,23 +163,23 @@ async function getProjectTasks(req, res) {
         };
 
         if (user_id) {
-            const userIdsArray = Array.isArray(user_id) ? user_id : [user_id]; 
-            const userIdQuery = userIdsArray.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id); 
-            matchCondition["user_task_details.user_id"] = { $in: userIdQuery }; 
+            const userIdsArray = Array.isArray(user_id) ? user_id : [user_id];
+            const userIdQuery = userIdsArray.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id);
+            matchCondition["user_task_details.user_id"] = { $in: userIdQuery };
         }
 
         const tasks = await req.db.collection('tasks')
             .aggregate([
                 {
                     $lookup: {
-                        from: 'user_tasks', 
-                        localField: '_id',  
-                        foreignField: 'task_id', 
-                        as: 'user_task_details' 
+                        from: 'user_tasks',
+                        localField: '_id',
+                        foreignField: 'task_id',
+                        as: 'user_task_details'
                     }
                 },
-                { $unwind: "$user_task_details" }, 
-                { $match: matchCondition }, 
+                { $unwind: "$user_task_details" },
+                { $match: matchCondition },
             ])
             .toArray();
 
@@ -199,5 +197,134 @@ async function getProjectTasks(req, res) {
     }
 }
 
+async function getTaskWithUserDetails(req, res) {
+    try {
+        const { taskId } = req.params;
 
-module.exports = { createTask, getUserTaskById, getProjectTasks };
+        if (!taskId || !ObjectId.isValid(taskId)) {
+            return res.status(400).json({ status: 'error', message: 'Valid Task ID is required' });
+        }
+
+        const taskObjectId = new ObjectId(taskId);
+
+        const taskDetails = await req.db.collection('tasks').aggregate([
+            {
+                $match: { _id: taskObjectId }
+            },
+            {
+                $lookup: {
+                    from: 'user_tasks',
+                    localField: '_id',
+                    foreignField: 'task_id',
+                    as: 'user_tasks_details'
+                }
+            },
+            {
+                $unwind: "$user_tasks_details"
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'user_tasks_details.user_id',
+                    foreignField: '_id',
+                    as: 'user_details'
+                }
+            },
+            {
+                $unwind: "$user_details"
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    description: { $first: "$description" },
+                    user: {
+                        $push: "$user_details"
+                    }
+                }
+            }
+        ]).toArray();
+
+        if (!taskDetails.length) {
+            return res.status(404).json({ status: 'error', message: 'Task not found' });
+        }
+
+        res.status(200).json({
+            status: 'ok',
+            data: taskDetails[0],
+            message: 'Task fetched successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+}
+
+async function updateTask(req, res) {
+    try {
+        const { taskId } = req.params;
+        const { title, description, status, user_id } = req.body;
+
+        if (!ObjectId.isValid(taskId)) {
+            return res.status(400).json({ status: 'error', message: 'Invalid taskId' });
+        }
+
+        const taskUpdateResult = await req.db.collection('tasks').updateOne(
+            { _id: new ObjectId(taskId) },
+            {
+                $set: {
+                    ...(title && { title }),
+                    ...(description && { description }),
+                    ...(status && { status }),
+                    updated_at: new Date()
+                }
+            }
+        );
+
+        if (taskUpdateResult.matchedCount === 0) {
+            return res.status(404).json({ status: 'error', message: 'Task not found' });
+        }
+
+        if (user_id) {
+            const userTask = await req.db.collection('user_tasks').findOne({
+                task_id: new ObjectId(taskId)
+            });
+
+            if (userTask) {
+
+                await req.db.collection('user_tasks').updateOne(
+                    { task_id: new ObjectId(taskId) },
+                    { $set: { user_id: new ObjectId(user_id), updated_at: new Date() } }
+                );
+            } else {
+
+                await req.db.collection('user_tasks').insertOne({
+                    user_id: new ObjectId(user_id),
+                    task_id: new ObjectId(taskId),
+                    project_id: userTask.project_id || null,
+                    created_at: new Date()
+                });
+            }
+        }
+
+        res.status(200).json({ status: 'ok', message: 'Task updated successfully' });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+}
+
+async function deleteTask(req, res) {
+    try {
+        const { taskId } = req.params;
+        const deleteTask = req.db.collection('tasks').deleteOne({ _id: new ObjectId(taskId) });
+        res.status(200).json({ status: 'ok', data: deleteTask, message: 'Task deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+}
+
+
+
+module.exports = { createTask, getUserTaskById, getProjectTasks, getTaskWithUserDetails, updateTask, deleteTask };

@@ -1,9 +1,7 @@
 const express = require('express');
 const app = express();
-const router = express.Router();
 const cors = require('cors');
 require('dotenv').config();
-const jwt = require('jsonwebtoken');
 const dbMiddleware = require('./middleware/dbMiddleware');
 const userRoutes = require('./routes/users');
 const organizationRoutes = require('./routes/organizations');
