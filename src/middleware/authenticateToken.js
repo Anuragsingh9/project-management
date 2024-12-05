@@ -1,11 +1,12 @@
 const jwt = require('jsonwebtoken');
+const { sendHttpResponse } = require('../helpers/helpers');
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        return res.status(401).json({ message: 'Access token is missing' });
+        sendHttpResponse(res, 401, 'error', [], 'Access token is missing');
     }
 
     try {
@@ -13,7 +14,7 @@ const authenticateToken = (req, res, next) => {
         req.authUserId = decodedToken.userId; // Attach the decoded user data to the request
         next();
     } catch (error) {
-        return res.status(403).json({ message: 'Invalid token' });
+        sendHttpResponse(res, 403, 'error', [], 'Invalid token');
     }
 };
 

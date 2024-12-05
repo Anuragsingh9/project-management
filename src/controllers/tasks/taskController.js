@@ -1,8 +1,8 @@
 const { ObjectId } = require('mongodb');
+const { sendHttpResponse } = require('../../helpers/helpers');
 async function createTask(req, res) {
     try {
         const { projectId } = req.params;
-        console.log('task', projectId);
 
         const task = await req.db.collection('tasks').insertOne({
             title: req.body.title,
@@ -19,9 +19,9 @@ async function createTask(req, res) {
                 project_id: new ObjectId(projectId),
             });
         };
-        res.status(201).json({ status: 'ok', data: task, message: 'Task created successfully' });
+        sendHttpResponse(res, 201, 'ok', task, 'Task created successfully');
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        sendHttpResponse(res, 500, 'error', [], error.message);
     }
 }
 
@@ -38,7 +38,7 @@ async function getUserTaskById(req, res) {
         const { project_id } = req.query;
         console.log('project_id', project_id, userId);
         if (!userId) {
-            return res.status(400).json({ status: 'error', message: 'User ID is required' });
+            sendHttpResponse(res, 400, 'ok', [], 'User ID is required');
         }
         // Check if userId is a valid ObjectId
         const userIdQuery = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
@@ -74,17 +74,14 @@ async function getUserTaskById(req, res) {
             message: 'Tasks fetched successfully'
         });
     } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+        sendHttpResponse(res, 500, 'error', [], error.message)
     }
 
     // try {
     //     const data = req.db.collection('tasks').aggregate([{ $lookup: { from: 'user_tasks', localField: "_id", foreignField: "user_id", as: "users_tasks" } }]).toArray();
     //     res.status(200).json({ status: 'ok', data: data, message: 'Data fecthed successfuly' });
     // } catch (error) {
-    // res.status(500).json({ status: 'error', message: error.message });
+    // sendHttpResponse(res, 500, 'error', [], error.message);
     // }
 }
 
@@ -142,7 +139,7 @@ async function getUserTaskById(req, res) {
 //     //     const data = req.db.collection('tasks').aggregate([{ $lookup: { from: 'user_tasks', localField: "_id", foreignField: "user_id", as: "users_tasks" } }]).toArray();
 //     //     res.status(200).json({ status: 'ok', data: data, message: 'Data fecthed successfuly' });
 //     // } catch (error) {
-//     // res.status(500).json({ status: 'error', message: error.message });
+//     // sendHttpResponse(res, 500, 'error', [], error.message);
 //     // }
 // }
 
@@ -153,7 +150,7 @@ async function getProjectTasks(req, res) {
         const { user_id } = req.query;
 
         if (!projectId) {
-            return res.status(400).json({ status: 'error', message: 'Project ID is required' });
+            sendHttpResponse(res, 400, 'error', [], 'Project ID is required');
         }
 
         const projectIdQuery = ObjectId.isValid(projectId) ? new ObjectId(projectId) : projectId;
@@ -194,6 +191,7 @@ async function getProjectTasks(req, res) {
             status: 'error',
             message: error.message
         });
+        sendHttpResponse(res, 500, 'error', [], error.message);
     }
 }
 
@@ -202,7 +200,7 @@ async function getTaskWithUserDetails(req, res) {
         const { taskId } = req.params;
 
         if (!taskId || !ObjectId.isValid(taskId)) {
-            return res.status(400).json({ status: 'error', message: 'Valid Task ID is required' });
+            sendHttpResponse(res, 400, 'error', [], 'Valid Task ID is required');
         }
 
         const taskObjectId = new ObjectId(taskId);
@@ -246,19 +244,11 @@ async function getTaskWithUserDetails(req, res) {
         ]).toArray();
 
         if (!taskDetails.length) {
-            return res.status(404).json({ status: 'error', message: 'Task not found' });
+            sendHttpResponse(res, 400, 'error', [], ' not found');
         }
-
-        res.status(200).json({
-            status: 'ok',
-            data: taskDetails[0],
-            message: 'Task fetched successfully'
-        });
+        sendHttpResponse(res, 200, 'ok', taskDetails[0], 'Task fetched successfully');
     } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+        sendHttpResponse(res, 400, 'error', [], error.message);
     }
 }
 
@@ -268,7 +258,7 @@ async function updateTask(req, res) {
         const { title, description, status, user_id } = req.body;
 
         if (!ObjectId.isValid(taskId)) {
-            return res.status(400).json({ status: 'error', message: 'Invalid taskId' });
+            sendHttpResponse(res, 400, 'error', [], 'Invalid taskId');
         }
 
         const taskUpdateResult = await req.db.collection('tasks').updateOne(
@@ -284,7 +274,7 @@ async function updateTask(req, res) {
         );
 
         if (taskUpdateResult.matchedCount === 0) {
-            return res.status(404).json({ status: 'error', message: 'Task not found' });
+            sendHttpResponse(res, 404, 'error', [], 'Task not found');
         }
 
         if (user_id) {
@@ -309,9 +299,9 @@ async function updateTask(req, res) {
             }
         }
 
-        res.status(200).json({ status: 'ok', message: 'Task updated successfully' });
+        sendHttpResponse(res, 200, 'ok', userTask, 'Task updated successfully');
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        sendHttpResponse(res, 500, 'error', [], error.message);
     }
 }
 
@@ -319,12 +309,28 @@ async function deleteTask(req, res) {
     try {
         const { taskId } = req.params;
         const deleteTask = req.db.collection('tasks').deleteOne({ _id: new ObjectId(taskId) });
-        res.status(200).json({ status: 'ok', data: deleteTask, message: 'Task deleted successfully' });
+
+        sendHttpResponse(res, 200, 'ok', deleteTask, 'Task deleted successfully');
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        sendHttpResponse(res, 500, 'error', [], error.message);
+    }
+}
+
+async function searchTask(req, res) {
+    try {
+        const { keyword, project_id } = req.query;
+        const query = {
+            $text: { $search: keyword },
+            project_id: new ObjectId(project_id)
+        };
+
+        const tasks = await req.db.collection('tasks').find(query).toArray();
+        sendHttpResponse(res, 200, 'ok', tasks, 'Task fetched successfully');
+    } catch (error) {
+        sendHttpResponse(res, 500, 'error', [], error.message);
     }
 }
 
 
 
-module.exports = { createTask, getUserTaskById, getProjectTasks, getTaskWithUserDetails, updateTask, deleteTask };
+module.exports = { createTask, getUserTaskById, getProjectTasks, getTaskWithUserDetails, updateTask, deleteTask, searchTask };
