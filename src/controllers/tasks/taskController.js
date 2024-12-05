@@ -7,16 +7,16 @@ async function createTask(req, res) {
         const task = await req.db.collection('tasks').insertOne({
             title: req.body.title,
             description: req.body.description,
-            project_id: new ObjectId(projectId),
+            project_id: ObjectId.createFromHexString(projectId),
             status: req.body.status,
             created_at: new Date(),
             updated_at: new Date()
         });
         if (req.body.user_id) { // Attaching user to task
             const user_tasks = await req.db.collection('user_tasks').insertOne({
-                user_id: new ObjectId(req.body.user_id),
+                user_id: ObjectId.createFromHexString(req.body.user_id),
                 task_id: task.insertedId,
-                project_id: new ObjectId(projectId),
+                project_id: ObjectId.createFromHexString(projectId),
             });
         };
         sendHttpResponse(res, 201, 'ok', task, 'Task created successfully');
@@ -41,7 +41,7 @@ async function getUserTaskById(req, res) {
             sendHttpResponse(res, 400, 'ok', [], 'User ID is required');
         }
         // Check if userId is a valid ObjectId
-        const userIdQuery = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
+        const userIdQuery = ObjectId.isValid(userId) ? ObjectId.createFromHexString(userId) : userId;
 
         const matchCondition = {
             "user_task_details.user_id": userIdQuery // Match user_id
@@ -49,7 +49,7 @@ async function getUserTaskById(req, res) {
 
         // Add projectId condition if it's provided and valid
         if (project_id && project_id.trim() !== "") {
-            matchCondition["user_task_details.project_id"] = new ObjectId(project_id);
+            matchCondition["user_task_details.project_id"] = ObjectId.createFromHexString(project_id);
         }
 
         const tasks = await req.db.collection('tasks')
@@ -94,7 +94,7 @@ async function getUserTaskById(req, res) {
 //             return res.status(400).json({ status: 'error', message: 'Project ID is required' });
 //         }
 //         // Check if userId is a valid ObjectId
-//         const projectIdQuery = ObjectId.isValid(projectId) ? new ObjectId(projectId) : projectId;
+//         const projectIdQuery = ObjectId.isValid(projectId) ? ObjectId.createFromHexString(projectId) : projectId;
 
 //         const matchCondition = {
 //             "user_task_details.project_id": projectIdQuery
@@ -102,7 +102,7 @@ async function getUserTaskById(req, res) {
 
 //         // Add projectId condition if it's provided and valid
 //         if (user_id && user_id.trim() !== "") {
-//             matchCondition["user_task_details.user_id"] = new ObjectId(user_id);
+//             matchCondition["user_task_details.user_id"] = ObjectId.createFromHexString(user_id);
 //         }
 
 //         console.log(projectIdQuery);
@@ -153,7 +153,7 @@ async function getProjectTasks(req, res) {
             sendHttpResponse(res, 400, 'error', [], 'Project ID is required');
         }
 
-        const projectIdQuery = ObjectId.isValid(projectId) ? new ObjectId(projectId) : projectId;
+        const projectIdQuery = ObjectId.isValid(projectId) ? ObjectId.createFromHexString(projectId) : projectId;
 
         const matchCondition = {
             "user_task_details.project_id": projectIdQuery
@@ -161,7 +161,7 @@ async function getProjectTasks(req, res) {
 
         if (user_id) {
             const userIdsArray = Array.isArray(user_id) ? user_id : [user_id];
-            const userIdQuery = userIdsArray.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id);
+            const userIdQuery = userIdsArray.map(id => ObjectId.isValid(id) ? ObjectId.createFromHexString(id) : id);
             matchCondition["user_task_details.user_id"] = { $in: userIdQuery };
         }
 
@@ -203,7 +203,7 @@ async function getTaskWithUserDetails(req, res) {
             sendHttpResponse(res, 400, 'error', [], 'Valid Task ID is required');
         }
 
-        const taskObjectId = new ObjectId(taskId);
+        const taskObjectId = ObjectId.createFromHexString(taskId);
 
         const taskDetails = await req.db.collection('tasks').aggregate([
             {
@@ -262,7 +262,7 @@ async function updateTask(req, res) {
         }
 
         const taskUpdateResult = await req.db.collection('tasks').updateOne(
-            { _id: new ObjectId(taskId) },
+            { _id: ObjectId.createFromHexString(taskId) },
             {
                 $set: {
                     ...(title && { title }),
@@ -279,20 +279,20 @@ async function updateTask(req, res) {
 
         if (user_id) {
             const userTask = await req.db.collection('user_tasks').findOne({
-                task_id: new ObjectId(taskId)
+                task_id: ObjectId.createFromHexString(taskId)
             });
 
             if (userTask) {
 
                 await req.db.collection('user_tasks').updateOne(
-                    { task_id: new ObjectId(taskId) },
-                    { $set: { user_id: new ObjectId(user_id), updated_at: new Date() } }
+                    { task_id: ObjectId.createFromHexString(taskId) },
+                    { $set: { user_id: ObjectId.createFromHexString(user_id), updated_at: new Date() } }
                 );
             } else {
 
                 await req.db.collection('user_tasks').insertOne({
-                    user_id: new ObjectId(user_id),
-                    task_id: new ObjectId(taskId),
+                    user_id: ObjectId.createFromHexString(user_id),
+                    task_id: ObjectId.createFromHexString(taskId),
                     project_id: userTask.project_id || null,
                     created_at: new Date()
                 });
@@ -308,7 +308,7 @@ async function updateTask(req, res) {
 async function deleteTask(req, res) {
     try {
         const { taskId } = req.params;
-        const deleteTask = req.db.collection('tasks').deleteOne({ _id: new ObjectId(taskId) });
+        const deleteTask = req.db.collection('tasks').deleteOne({ _id: ObjectId.createFromHexString(taskId) });
 
         sendHttpResponse(res, 200, 'ok', deleteTask, 'Task deleted successfully');
     } catch (error) {
@@ -321,7 +321,7 @@ async function searchTask(req, res) {
         const { keyword, project_id } = req.query;
         const query = {
             $text: { $search: keyword },
-            project_id: new ObjectId(project_id)
+            project_id: ObjectId.createFromHexString(project_id)
         };
 
         const tasks = await req.db.collection('tasks').find(query).toArray();

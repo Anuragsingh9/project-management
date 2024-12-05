@@ -4,7 +4,7 @@ const { sendHttpResponse } = require("../helpers/helpers");
 async function isAdminUser(req, res, next) {
     try {
         const userId = req.authUserId;
-        const isAdminUser = await req.db.collection('users').findOne({ _id: new ObjectId(userId) });
+        const isAdminUser = await req.db.collection('users').findOne({ _id: ObjectId.createFromHexString(userId) });
         if (!(isAdminUser && isAdminUser.role_id == 1)) {
             sendHttpResponse(res, 403, 'error', [], 'Permission denied');
         }

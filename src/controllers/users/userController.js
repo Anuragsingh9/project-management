@@ -42,7 +42,7 @@ async function login(req, res) {
 async function getUser(req, res) {
     try {
         const userId = req.authUserId;
-        const user = await req.db.collection('users').findOne({ _id: new ObjectId(userId) });
+        const user = await req.db.collection('users').findOne({ _id: ObjectId.createFromHexString(userId) });
         console.log('getUser ', userId, user);
         sendHttpResponse(res, 200, 'ok', user, 'User data fetched successfully');
     } catch (error) {
@@ -53,7 +53,7 @@ async function getUser(req, res) {
 async function updateUser(req, res) {
     try {
         const userId = req.authUserId;
-        const userCollection = await req.db.collection('users').updateOne({ _id: new ObjectId(userId) }, { $set: { first_name: 'Anurag updated' } });
+        const userCollection = await req.db.collection('users').updateOne({ _id: ObjectId.createFromHexString(userId) }, { $set: { first_name: 'Anurag updated' } });
         sendHttpResponse(res, 201, 'ok', userCollection, 'User data updated successfully');
     } catch (error) {
         sendHttpResponse(res, 500, 'error', [], error.message);

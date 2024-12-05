@@ -4,7 +4,7 @@ const { sendHttpResponse } = require('../helpers/helpers');
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        sendHttpResponse(res,400,'error',[],errors.array());
+        sendHttpResponse(res, 400, 'error', [], errors.array());
     }
     next();
 };

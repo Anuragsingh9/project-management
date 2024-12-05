@@ -16,7 +16,7 @@ async function createProject(req, res) {
 async function getProject(req, res) {
     try {
         const { projectId } = req.params;
-        const project = await req.db.collection('projects').findOne({ _id: new ObjectId(projectId) });
+        const project = await req.db.collection('projects').findOne({ _id: ObjectId.createFromHexString(projectId) });
         sendHttpResponse(res, 200, 'ok', project, 'Project created successfully');
     } catch (error) {
         sendHttpResponse(res, 500, 'error', [], error.message);
@@ -36,7 +36,7 @@ async function getProjectList(req, res) {
 async function updateProject(req, res) {
     try {
         const { projectId } = req.params;
-        const project = await req.db.collection('projects').updateOne({ _id: new ObjectId(projectId) }, { $set: { name: req.body.name, update_at: new Date() } });
+        const project = await req.db.collection('projects').updateOne({ _id: ObjectId.createFromHexString(projectId) }, { $set: { name: req.body.name, update_at: new Date() } });
         sendHttpResponse(res, 200, 'ok', project, 'Organization project updated successfully');
     } catch (error) {
         sendHttpResponse(res, 500, 'error', [], error.message);

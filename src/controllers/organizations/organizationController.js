@@ -3,7 +3,7 @@ const { sendHttpResponse } = require('../../helpers/helpers');
 async function register(req, res) {
     try {
         const userId = req.authUserId;
-        const user = await req.db.collection('users').findOne({ _id: new ObjectId(userId) });
+        const user = await req.db.collection('users').findOne({ _id: ObjectId.createFromHexString(userId) });
         if (user.role_id != 1) {
             sendHttpResponse(res, 403, 'error', [], 'Permission denied');
         }
@@ -17,7 +17,7 @@ async function register(req, res) {
 async function getOrganization(req, res) {
     try {
         const { orgId } = req.params;
-        const organization = await req.db.collection('organizations').findOne({ _id: new ObjectId(orgId) });
+        const organization = await req.db.collection('organizations').findOne({ _id: ObjectId.createFromHexString(orgId) });
         sendHttpResponse(res, 200, 'ok', organization, 'Organization fetched successfully');
     } catch (error) {
         sendHttpResponse(res, 500, 'error', [], error.message);
